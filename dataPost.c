@@ -9,7 +9,7 @@
 
 int main(int argc, char *argv[])
 {
-  char *astr = "Currently, CGI program is running, but argument passing is not implemented.";
+  char *astr = "Currently, CGI program is running, but argument passing is not implemented.\n\n";
   
   printf("HTTP/1.0 200 OK\r\n");
   printf("Server: My Web Server\r\n");

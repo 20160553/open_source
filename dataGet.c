@@ -41,6 +41,7 @@ void htmlReturn(void)
   printf("Content-Length: %d\r\n", strlen(content));
   printf("Content-Type: text/html\r\n\r\n");
   printf("%s", content);
+  printf("\n\n");
   fflush(stdout);
 }
 

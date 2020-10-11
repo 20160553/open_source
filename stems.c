@@ -50,6 +50,15 @@ int Setenv(const char *name, const char *value, int overwrite)
     return rc;
 }
 
+char* Getenv(const char* name)
+{
+    char* rc;
+
+    if ((rc = getenv(name)) == NULL)
+        unix_error("Getenv error");
+    return rc;
+}
+
 /*********************************************
  * Wrappers for Unix process control functions
  ********************************************/
@@ -137,6 +146,18 @@ int Select(int  n, fd_set *readfds, fd_set *writefds,
 
     if ((rc = select(n, readfds, writefds, exceptfds, timeout)) < 0)
         unix_error("Select error");
+    return rc;
+}
+
+/*Pipe()*/
+int Pipe(int fd[2])
+{
+    int rc;
+
+    if ((rc = pipe(fd)) < 0) {
+        fprintf(stderr, "pipe	failed:%s\n", strerror(errno));	/*	not	safe	*/
+        exit(1);
+    }
     return rc;
 }
 

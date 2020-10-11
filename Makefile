@@ -8,7 +8,7 @@ TARGET = server
 CC = gcc
 CFLAGS = -g -Wall
 
-LIBS = -lpthread 
+LIBS = -lpthread
 
 .SUFFIXES: .c .o 
 
@@ -23,8 +23,8 @@ clientGet: clientGet.o stems.o
 clientPost: clientPost.o stems.o
 	$(CC) $(CFLAGS) -o clientPost clientPost.o stems.o $(LIBS)
 
-dataGet.cgi: dataGet.c stems.h
-	$(CC) $(CFLAGS) -o dataGet.cgi dataGet.c
+dataGet.cgi: dataGet.c stems.o
+	$(CC) $(CFLAGS) -o dataGet.cgi dataGet.c stems.o
 
 dataPost.cgi: dataPost.c stems.h
 	$(CC) $(CFLAGS) -o dataPost.cgi dataPost.c

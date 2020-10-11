@@ -82,7 +82,8 @@ void requestReadhdrs(rio_t *rp, int *length)
 //
 int parseURI(char *uri, char *filename, char *cgiargs) 
 {
-  if (!strstr(uri, "cgi")) {
+  //"cgi" -> ".cgi"
+  if (!strstr(uri, ".cgi")) {
     // static
     strcpy(cgiargs, "");
     sprintf(filename, ".%s", uri);
@@ -156,23 +157,31 @@ void requestServeDynamic(rio_t *rio, int fd, char *filename, char *cgiargs, int 
   
     int	res;
     int	pid;
+
+    int pipe[2];
+
     char* argv[] = { NULL };
 
     Setenv("QUERY_STRING", cgiargs, 1);
     pid = Fork();
 
+    //added level_2
+    Pipe(pipe);
+
     if (pid == 0) {
         /*	do	child	job	*/
-        /*printf("Child:	it	works.\n");*/
+
+        //added level_2
+        Dup2(pipe[1], STDIN_FILENO);
+
         Execve(filename, argv, environ);
     }
     else	if (pid > 0) {
         /*	do	parent	job	*/
         Wait(&res);
-        //printf("Parent:	child	done	with	%d.\n", res >> 8);
     }
 
-    return(0);
+    return;
 }
 
 
