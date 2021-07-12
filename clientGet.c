@@ -13,13 +13,161 @@
  *
  */
 
-
 #include <stdio.h>
 #include <pthread.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <semaphore.h>
 #include "stems.h"
+
+#define STR_LEN 1024
+#define MAX_TOKENS 10
+
+struct CMD
+{
+  char *name;
+  char *desc;
+  int (*cmd)(int argc, char *agrv[], char webaddr[]);
+};
+
+int cmdProcessing(char webaddr[], int threshold);
+extern int cmd_help(int arfc, char *argv[], char webaddr[]);
+extern int cmd_list(int argc, char *argv[], char webaddr[]);
+extern int cmd_info(int arfc, char *argv[], char webaddr[]);
+extern int cmd_get(int arfc, char *argv[], char webaddr[]);
+extern int cmd_quit(int argc, char *argv[], char webaddr[]);
+const int builtins = 5;
+struct CMD builtin[] = {
+    {"help", "list available commands", cmd_help},
+    {"list", "print sensor list in DB", cmd_list},
+    {"info", "<sname>: print sensor's information", cmd_info},
+    {"get", "<sname> : print current sensor's data (time, data)\nget <sname> <n> : print current sensor's <n> data (time, data)", cmd_get},
+    {"quit", "exit from this program", cmd_quit}};
+
+int init_myShell(char *);
+
+int cmdProcessing(char webaddr[], int threshold)
+{
+  char cmdLine[STR_LEN] = "";
+  char *cmdTokens[MAX_TOKENS];
+  char delim[] = " \t\n\r";
+  char *token;
+  int tokenNum;
+  int exitCode = 0;
+  int i;
+
+  fgets(cmdLine, STR_LEN, stdin);
+
+  //token split
+  tokenNum = 0;
+  token = strtok(cmdLine, delim);
+  while (token)
+  {
+    cmdTokens[tokenNum++] = token;
+    token = strtok(NULL, delim);
+  }
+  cmdTokens[tokenNum] = NULL;
+  if (tokenNum == 0)
+    return exitCode;
+  if (strcmp(cmdTokens[0], "quit") == 0)
+    return 1;
+  for (i = 0; i < builtins; ++i)
+    if (strcmp(cmdTokens[0], builtin[i].name) == 0)
+    {
+      int res = builtin[i].cmd(tokenNum, cmdTokens, webaddr);
+      return res;
+    }
+
+  return exitCode;
+}
+
+int cmd_help(int argc, char *argv[], char webaddr[])
+{
+  int i;
+
+  if (argc == 1)
+  {
+    for (i = 0; i < builtins; ++i)
+    {
+
+      fputs(builtin[i].name, stdout);
+      fputs(": ", stdout);
+      fputs(builtin[i].desc, stdout);
+      fputc('\n', stdout);
+    }
+  }
+  else if (argc == 2)
+  {
+    for (i = 0; i < builtins; ++i)
+    {
+      if (strcmp(argv[1], builtin[i].name) == 0)
+      {
+        fputs(builtin[i].name, stdout);
+        fputs(": ", stdout);
+        fputs(builtin[i].desc, stdout);
+        fputc('\n', stdout);
+        break;
+      }
+    }
+    if (i == builtins)
+      fputs("can't find command\n", stdout);
+  }
+  else
+    fputs("help: help [argument]\n", stdout);
+
+  return 0;
+}
+
+int cmd_list(int argc, char *argv[], char webaddr[])
+{
+  if (argc == 1)
+  {
+    sprintf(webaddr, "/dataGet.cgi?command=LIST");
+    return 2;
+  }
+  else
+  {
+    fputs("Error : cmd_name\n", stdout);
+    return 0;
+  }
+}
+int cmd_info(int argc, char *argv[], char webaddr[])
+{
+  if (argc == 2)
+  {
+    sprintf(webaddr, "/dataGet.cgi?command=INFO&sname=%s", argv[1]);
+    return 2;
+  }
+  else
+  {
+    fputs("Error : cmd_value\n", stdout);
+    return 0;
+  }
+}
+
+int cmd_get(int argc, char *argv[], char webaddr[])
+{
+  if (argc == 2) // argument 1
+  {
+    sprintf(webaddr, "/dataGet.cgi?command=GET&sname=%s&n=1", argv[1]);
+    return 2;
+  }
+  if (argc == 3) // argument 2
+  {
+    sprintf(webaddr, "/dataGet.cgi?command=GET&sname=%s&n=%s", argv[1], argv[2]);
+    return 2;
+  }
+  else
+  {
+    fputs("Error : cmd_get\n", stdout);
+    return 0;
+  }
+}
+int cmd_quit(int argc, char *argv[], char webaddr[])
+{
+  fputs("Exit. :) \n", stdout);
+  return 1;
+}
 
 /*
  * Send an HTTP request for the specified file 
@@ -36,37 +184,43 @@ void clientSend(int fd, char *filename)
   sprintf(buf, "%shost: %s\n\r\n", buf, hostname);
   Rio_writen(fd, buf, strlen(buf));
 }
-  
+
 /*
  * Read the HTTP response and print it out
  */
 void clientPrint(int fd)
 {
   rio_t rio;
-  char buf[MAXBUF];  
+  char buf[MAXBUF];
   int length = 0;
   int n;
-  
+
   Rio_readinitb(&rio, fd);
 
   /* Read and display the HTTP Header */
   n = Rio_readlineb(&rio, buf, MAXBUF);
-  while (strcmp(buf, "\r\n") && (n > 0)) {
-    printf("Header: %s", buf);
+  if (!(n > 0))
+    return;
+  while (strcmp(buf, "\r\n") && (n > 0))
+  {
+    printf("%s", buf);
     n = Rio_readlineb(&rio, buf, MAXBUF);
 
     /* If you want to look for certain HTTP tags... */
-    if (sscanf(buf, "Content-Length: %d ", &length) == 1) {
+    if (sscanf(buf, "Content-Length: %d ", &length) == 1)
+    {
       printf("Length = %d\n", length);
     }
   }
 
   /* Read and display the HTTP Body */
   n = Rio_readlineb(&rio, buf, MAXBUF);
-  while (n > 0) {
-    printf("%s", buf);
+  while (n > 0)
+  {
+    printf("%s", buf); // delete header:
     n = Rio_readlineb(&rio, buf, MAXBUF);
   }
+  fputs(">>", stdout);
 }
 
 /* currently, there is no loop. I will add loop later */
@@ -80,7 +234,7 @@ void userTask(char hostname[], int port, char webaddr[])
   Close(clientfd);
 }
 
-void getargs_cg(char hostname[], int *port, char webaddr[])
+void getargs_cg(char hostname[], int *port, char webaddr[], char alarmSensor[], int *threshold)
 {
   FILE *fp;
 
@@ -91,17 +245,62 @@ void getargs_cg(char hostname[], int *port, char webaddr[])
   fscanf(fp, "%s", hostname);
   fscanf(fp, "%d", port);
   fscanf(fp, "%s", webaddr);
+  fscanf(fp, "%s", alarmSensor);
+  fscanf(fp, "%d", threshold);
   fclose(fp);
 }
 
 int main(void)
 {
-  char hostname[MAXLINE], webaddr[MAXLINE];
-  int port;
-  
-  getargs_cg(hostname, &port, webaddr);
+  char hostname[MAXLINE], webaddr[MAXLINE], alarmSensor[MAXLINE];
+  int port, sel, threshold;
+  int fd, state;
+  struct timeval tv;
+  getargs_cg(hostname, &port, webaddr, alarmSensor, &threshold);
+  fputs(">>", stdout);
+  fflush(NULL);
+  while (1)
+  {
+    fd_set readfds;
+    fd = fileno(stdin);
 
-  userTask(hostname, port, webaddr);
-  
-  return(0);
+    FD_ZERO(&readfds);
+
+    FD_SET(fd, &readfds);
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+    state = select(fd + 1, &readfds, (fd_set *)0, (fd_set *)0, &tv);
+
+    switch (state)
+    {
+    case -1:
+      perror("select error: ");
+      exit(0);
+      break;
+    case 0:
+      sprintf(webaddr, "/dataGet.cgi?command=ALARM&sname=%s&n=%d", alarmSensor, threshold);
+      sel = 2;
+      break;
+    default:
+      sel = cmdProcessing(webaddr, threshold);
+      break;
+    }
+
+    if (sel == 1)
+    {
+      break;
+    }
+    else if (sel == 0)
+    {
+      // exception when return 0 ;
+      fputs(">>", stdout);
+    }
+    else if (sel == 2)
+    {
+      userTask(hostname, port, webaddr);
+    }
+    fflush(stdout);
+  }
+
+  return (0);
 }

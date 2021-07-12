@@ -2,39 +2,43 @@
 # To compile, type "make" or make "all"
 # To remove files, type "make clean"
 #
-OBJS = server.o request.o stems.o clientGet.o clientPost.o
+OBJS = server.o request.o stems.o clientGet.o clientPost.o clientPost_v8.o
 TARGET = server
 
 CC = gcc
 CFLAGS = -g -Wall
-
-LIBS = -lpthread
+LIBS = -lpthread 
+DB = $(shell mysql_config --libs)
 
 .SUFFIXES: .c .o 
 
-all: server clientPost clientGet dataGet.cgi dataPost.cgi
+all: server clientPost clientGet dataGet.cgi dataPost.cgi clientPost_v8
 
 server: server.o request.o stems.o
 	$(CC) $(CFLAGS) -o server server.o request.o stems.o $(LIBS)
 
+clientPost_v8: clientPost_v8.o stems.o
+	$(CC) $(CFLAGS) -o clientPost_v8 clientPost_v8.o stems.o $(LIBS)
+
 clientGet: clientGet.o stems.o
-	$(CC) $(CFLAGS) -o clientGet clientGet.o stems.o
+	$(CC) $(CFLAGS) -o clientGet clientGet.o stems.o $(LIBS)
 
 clientPost: clientPost.o stems.o
 	$(CC) $(CFLAGS) -o clientPost clientPost.o stems.o $(LIBS)
 
 dataGet.cgi: dataGet.c stems.o
-	$(CC) $(CFLAGS) -o dataGet.cgi dataGet.c stems.o
+	$(CC) $(CFLAGS) -o dataGet.cgi dataGet.c stems.o $(DB)
 
-dataPost.cgi: dataPost.c stems.h
-	$(CC) $(CFLAGS) -o dataPost.cgi dataPost.c
+dataPost.cgi: dataPost.c stems.o
+	$(CC) $(CFLAGS) -o dataPost.cgi dataPost.c stems.o $(DB)
 
 .c.o:
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 server.o: stems.h request.h
+clientPost_v8.o: stems.h
 clientGet.o: stems.h
 clientPost.o: stems.h
 
 clean:
-	-rm -f $(OBJS) server clientPost clientGet dataGet.cgi dataPost.cgi
+	-rm -f $(OBJS) server clientPost clientGet dataGet.cgi dataPost.cgi clientPost_v8

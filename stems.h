@@ -1,6 +1,7 @@
 #ifndef __CSAPP_H__
 #define __CSAPP_H__
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -23,7 +24,6 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
 
 /* Default file permissions are DEF_MODE & ~DEF_UMASK */
 /* $begin createmasks */
@@ -80,6 +80,7 @@ off_t Lseek(int fildes, off_t offset, int whence);
 void Close(int fd);
 int Select(int  n, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, 
            struct timeval *timeout);
+int Pipe(int fd[2]);
 int Dup2(int fd1, int fd2);
 void Stat(const char *filename, struct stat *buf);
 void Fstat(int fd, struct stat *buf) ;
